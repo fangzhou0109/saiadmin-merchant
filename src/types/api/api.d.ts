@@ -1,0 +1,141 @@
+/**
+ * API 接口类型定义模块
+ *
+ * 提供所有后端接口的类型定义
+ *
+ * ## 主要功能
+ *
+ * - 通用类型（分页参数、响应结构等）
+ * - 认证类型（登录、用户信息等）
+ * - 系统管理类型（用户、角色等）
+ * - 全局命名空间声明
+ *
+ * ## 使用场景
+ *
+ * - API 请求参数类型约束
+ * - API 响应数据类型定义
+ * - 接口文档类型同步
+ *
+ * ## 注意事项
+ *
+ * - 在 .vue 文件使用需要在 eslint.config.mjs 中配置 globals: { Api: 'readonly' }
+ * - 使用全局命名空间，无需导入即可使用
+ *
+ * ## 使用方式
+ *
+ * ```typescript
+ * const params: Api.Auth.LoginParams = { userName: 'admin', password: '123456' }
+ * const response: Api.Auth.UserInfo = await fetchUserInfo()
+ * ```
+ *
+ * @module types/api/api
+ * @author Art Design Pro Team
+ */
+
+declare namespace Api {
+  /** 通用类型 */
+  namespace Common {
+    /** 分页参数 */
+    interface PaginationParams {
+      /** 当前页码 */
+      current: number
+      /** 每页条数 */
+      size: number
+      /** 总条数 */
+      total: number
+    }
+
+    /** 通用搜索参数 */
+    type CommonSearchParams = Pick<PaginationParams, 'current' | 'size'>
+
+    type SafeRecord = Record<string, unknown>
+
+    type ApiData = {
+      [key: string]: any
+    }
+
+    type ApiPage<T = any> = {
+      current_page: number
+      data: T[]
+      per_page: number
+      total: number
+    }
+
+    /** 分页响应基础结构 */
+    interface PaginatedResponse<T = any> {
+      records: T[]
+      current: number
+      size: number
+      total: number
+    }
+
+    /** 启用状态 */
+    type EnableStatus = '1' | '2'
+  }
+
+  /** 认证类型 */
+  namespace Auth {
+    /** 验证码参数 */
+    interface CaptchaResponse {
+      result: number
+      uuid: string
+      image: string
+    }
+
+    /** 登录参数 */
+    interface LoginParams {
+      username: string
+      password: string
+      code: string
+      uuid: string
+    }
+
+    /** 登录响应 */
+    interface LoginResponse {
+      token_type: string
+      expires_in: number
+      access_token: string
+      refresh_token: string
+    }
+
+    /** 用户信息（平台后台 + 商户门户共用；商户侧额外含 mch_id / login_name） */
+    interface UserInfo {
+      buttons: string[]
+      roles: string[]
+      id: number
+      username: string
+      email: string
+      phone: string
+      avatar?: string
+      realname?: string
+      /** 商户展示名（门户 /mapi/auth/info） */
+      name?: string
+      /** 商户号（门户） */
+      mch_id?: string
+      /** 登录账号（门户） */
+      login_name?: string
+      dashboard?: string
+      gender?: string
+      signed?: string
+      department?: {
+        id: number
+        name: string
+      }
+    }
+
+    // 基础项类型
+    interface DictItem {
+      id: number
+      label: string
+      value: string | number
+      color: string
+      disabled?: boolean
+      [key: string]: any
+    }
+
+    // 主对象类型
+    interface DictData {
+      [key: string]: DictItem[]
+    }
+  }
+}
