@@ -27,10 +27,9 @@ export default ({ mode }: { mode: string }) => {
     server: {
       port: Number(VITE_PORT),
       proxy: {
-        '/api': {
+        '/prod': {
           target: VITE_API_PROXY_URL,
-          changeOrigin: true,
-          // rewrite: (path) => path.replace(new RegExp('^' + VITE_API_URL), '')
+          changeOrigin: true
         }
       },
       host: true
