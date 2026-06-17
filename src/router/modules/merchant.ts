@@ -41,16 +41,16 @@ export const merchantRoutes: AppRouteRecord = {
       meta: { title: '代付通道', icon: 'ri:swap-line', keepAlive: true }
     },
     {
-      path: 'withdraw',
-      name: 'MerchantWithdraw',
-      component: '/merchant/withdraw',
-      meta: { title: '提现', icon: 'ri:hand-coin-line', keepAlive: true }
-    },
-    {
       path: 'transfer-order',
       name: 'MerchantTransferOrder',
       component: '/merchant/transfer-order',
       meta: { title: '代付订单', icon: 'ri:send-plane-line', keepAlive: true }
+    },
+    {
+      path: 'withdraw',
+      name: 'MerchantWithdraw',
+      component: '/merchant/withdraw',
+      meta: { title: '提现', icon: 'ri:hand-coin-line', keepAlive: true }
     },
     {
       path: 'bankcard',

@@ -77,7 +77,51 @@
         代收与代付费率均由平台按「商户×通道」配置，门户不展示具体费率；提现手续费以实际申请时系统计算为准。
       </ElAlert>
       <ElAlert type="warning" :closable="false" show-icon style="margin-top: 12px">
-        请妥善保管签名密钥，切勿泄露。重置后旧 MD5 密钥与平台 RSA 密钥对立即失效，需同步更新服务端配置。
+        请妥善保管签名密钥，切勿泄露。重置后旧 MD5 密钥与平台 RSA
+        密钥对立即失效，需同步更新服务端配置。
+      </ElAlert>
+    </ElCard>
+
+    <ElCard shadow="never" style="margin-top: 16px">
+      <template #header>
+        <span>代付自动下发阈值</span>
+      </template>
+
+      <p class="rsa-tip">
+        通过 API 提交代付（<code>/pay/transfer</code>）时，<b>单笔金额 ≤ 该阈值</b
+        >将<b>自动下发</b>，无需平台人工审核； 超过阈值的订单仍转平台人工审核。设为
+        <code>0</code> 表示全部转平台人工审核（回落平台全局配置）。
+        <b>阈值不得超过可用余额 {{ info.balance || '0' }} 元。</b>
+      </p>
+
+      <ElForm label-width="0" @submit.prevent>
+        <ElFormItem>
+          <ElInput
+            v-model="thresholdDraft"
+            style="max-width: 280px"
+            placeholder="请输入金额（元），0 表示全部转人工"
+          >
+            <template #prepend>≤</template>
+            <template #append>元 自动下发</template>
+          </ElInput>
+        </ElFormItem>
+        <ElFormItem>
+          <ElSpace wrap>
+            <ElButton type="primary" :loading="thresholdSaving" @click="handleSaveThreshold">
+              保存阈值
+            </ElButton>
+            <ElButton @click="thresholdDraft = info.auto_disbursement_threshold || '0'"
+              >重置</ElButton
+            >
+          </ElSpace>
+        </ElFormItem>
+      </ElForm>
+
+      <ElAlert type="info" :closable="false" show-icon style="margin-top: 4px">
+        当前生效阈值：{{ info.auto_disbursement_threshold || '0' }} 元｜可用余额：{{
+          info.balance || '0'
+        }}
+        元
       </ElAlert>
     </ElCard>
 
@@ -87,7 +131,8 @@
       </template>
 
       <p class="rsa-tip">
-        使用 <code>sign_type=2</code> 对接时，请在本机生成 RSA 密钥对，<b>私钥留在你的服务器</b>，将公钥粘贴到下方并保存。
+        使用 <code>sign_type=2</code> 对接时，请在本机生成 RSA
+        密钥对，<b>私钥留在你的服务器</b>，将公钥粘贴到下方并保存。
         平台用此公钥验证你的下单/查询等请求签名。
       </p>
 
@@ -106,7 +151,12 @@
               保存公钥
             </ElButton>
             <ElButton @click="rsaPublicKeyDraft = info.rsa_public_key || ''">重置</ElButton>
-            <ElButton v-if="info.rsa_public_key" type="danger" plain @click="handleClearRsaPublicKey">
+            <ElButton
+              v-if="info.rsa_public_key"
+              type="danger"
+              plain
+              @click="handleClearRsaPublicKey"
+            >
               清除公钥
             </ElButton>
           </ElSpace>
@@ -156,6 +206,8 @@
   const showKey = ref(false)
   const rsaPublicKeyDraft = ref('')
   const rsaSaving = ref(false)
+  const thresholdDraft = ref('0')
+  const thresholdSaving = ref(false)
   const resetDialogVisible = ref(false)
   const resetPackage = ref<Record<string, any>>({})
 
@@ -203,6 +255,7 @@
       if (data) {
         info.value = data
         rsaPublicKeyDraft.value = data.rsa_public_key || ''
+        thresholdDraft.value = data.auto_disbursement_threshold || '0'
       }
     } finally {
       loading.value = false
@@ -220,10 +273,35 @@
     }
   }
 
+  const handleSaveThreshold = async () => {
+    const val = (thresholdDraft.value ?? '').toString().trim()
+    if (val === '' || isNaN(Number(val)) || Number(val) < 0) {
+      ElMessage.warning('请输入不小于 0 的金额')
+      return
+    }
+    const balance = Number(info.value.balance ?? 0)
+    if (Number(val) > balance) {
+      ElMessage.warning(`阈值不能超过可用余额 ${info.value.balance || '0'} 元`)
+      return
+    }
+    thresholdSaving.value = true
+    try {
+      await api.updateAutoDisburseThreshold({ auto_disbursement_threshold: val })
+      ElMessage.success('代付自动下发阈值已保存')
+      await loadInfo()
+    } finally {
+      thresholdSaving.value = false
+    }
+  }
+
   const handleClearRsaPublicKey = () => {
-    ElMessageBox.confirm('确认清除商户来签 RSA 公钥？清除后仅可使用 MD5（sign_type=1）对接。', '提示', {
-      type: 'warning'
-    })
+    ElMessageBox.confirm(
+      '确认清除商户来签 RSA 公钥？清除后仅可使用 MD5（sign_type=1）对接。',
+      '提示',
+      {
+        type: 'warning'
+      }
+    )
       .then(async () => {
         rsaSaving.value = true
         try {
@@ -267,40 +345,47 @@
   .merchant-account {
     padding: 4px;
   }
+
   .mono {
     font-family: monospace;
   }
+
   .break-all {
     word-break: break-all;
   }
+
   .pre-key {
-    margin: 0;
     max-height: 200px;
-    overflow: auto;
     padding: 8px;
-    border-radius: 4px;
-    background: var(--el-fill-color-light);
-    white-space: pre-wrap;
-    word-break: break-all;
+    margin: 0;
+    overflow: auto;
     font-size: 12px;
+    word-break: break-all;
+    white-space: pre-wrap;
+    background: var(--el-fill-color-light);
+    border-radius: 4px;
   }
+
   .text-secondary {
     color: var(--el-text-color-secondary);
   }
+
   .text-sm {
     font-size: 12px;
     line-height: 1.5;
   }
+
   .rsa-tip {
     margin: 0 0 12px;
     font-size: 13px;
     line-height: 1.6;
     color: var(--el-text-color-regular);
   }
+
   .rsa-tip code {
     padding: 1px 4px;
     font-size: 12px;
-    border-radius: 4px;
     background: var(--el-fill-color);
+    border-radius: 4px;
   }
 </style>

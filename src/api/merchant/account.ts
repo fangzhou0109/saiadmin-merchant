@@ -24,5 +24,13 @@ export default {
       url: '/mapi/account/updateRsaPublicKey',
       data
     })
+  },
+
+  /** 设置 API 代付自动下发阈值（元，0=回落全局/全部转人工） */
+  updateAutoDisburseThreshold(data: { auto_disbursement_threshold: string }) {
+    return request.post<any>({
+      url: '/mapi/account/updateAutoDisburseThreshold',
+      data
+    })
   }
 }
