@@ -22,6 +22,17 @@ export default {
     })
   },
 
+  /**
+   * 商户自助审核代付单（需平台开通「代付自审」开关）
+   * @param data { id, action: 'disburse'|'reject', remark? }
+   */
+  audit(data: { id: number | string; action: 'disburse' | 'reject'; remark?: string }) {
+    return request.post<any>({
+      url: '/mapi/transferOrder/audit',
+      data
+    })
+  },
+
   /** 手动重推下游通知（仅终态可推） */
   renotify(id: number | string) {
     return request.post<any>({

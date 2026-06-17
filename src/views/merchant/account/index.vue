@@ -88,9 +88,10 @@
       </template>
 
       <p class="rsa-tip">
-        通过 API 提交代付（<code>/pay/transfer</code>）时，<b>单笔金额 ≤ 该阈值</b
-        >将<b>自动下发</b>，无需平台人工审核； 超过阈值的订单仍转平台人工审核。设为
-        <code>0</code> 表示全部转平台人工审核（回落平台全局配置）。
+        通过 API 提交代付（<code>/pay/transfer</code>）时，设为
+        <code>0</code>（默认）表示<b>全部自动下发</b>、免人工审核；设为 <b>大于 0</b> 时，<b
+          >单笔金额 ≤ 该阈值</b
+        >才自动下发，超过阈值的订单转人工审核。
         <b>阈值不得超过可用余额 {{ info.balance || '0' }} 元。</b>
       </p>
 
@@ -99,7 +100,7 @@
           <ElInput
             v-model="thresholdDraft"
             style="max-width: 280px"
-            placeholder="请输入金额（元），0 表示全部转人工"
+            placeholder="请输入金额（元），0 表示全部自动下发"
           >
             <template #prepend>≤</template>
             <template #append>元 自动下发</template>
