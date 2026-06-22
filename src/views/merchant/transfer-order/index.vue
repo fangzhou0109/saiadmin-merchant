@@ -43,16 +43,6 @@
                 拒绝
               </ElButton>
             </template>
-            <ElButton
-              type="warning"
-              size="small"
-              plain
-              :disabled="!canRenotify(row)"
-              :loading="renotifyingId === row.id"
-              @click="handleRenotify(row)"
-            >
-              重推通知
-            </ElButton>
           </div>
         </template>
       </ArtTable>
@@ -84,9 +74,6 @@
   /** 仅自审商户且「待审核(0)」状态可审核下发/拒绝 */
   const canAudit = (row: Record<string, any>) => selfAuditEnabled.value && row.status === 0
 
-  /** 仅「成功(3)/代付失败(-2)」终态可重推下游通知 */
-  const canRenotify = (row: Record<string, any>) => row.status === 3 || row.status === -2
-
   const createDefaultSearchForm = () => ({
     withdraw_no: undefined,
     out_biz_no: undefined,
@@ -97,7 +84,6 @@
   const searchForm = ref(createDefaultSearchForm())
   const detailVisible = ref(false)
   const currentRow = ref<Record<string, any>>({})
-  const renotifyingId = ref<number | string>('')
   const auditingId = ref<number | string>('')
 
   const {
@@ -128,7 +114,7 @@
         { prop: 'status', label: '状态', width: 100, useSlot: true, slotName: 'status' },
         { prop: 'transfer_no', label: '上游代付单号', minWidth: 160 },
         { prop: 'create_time', label: '进单时间', width: 170, sortable: true },
-        { prop: 'operation', label: '操作', width: 170, fixed: 'right', useSlot: true }
+        { prop: 'operation', label: '操作', width: 140, fixed: 'right', useSlot: true }
       ]
     }
   })
@@ -146,30 +132,6 @@
   const openDetail = (row: Record<string, any>) => {
     currentRow.value = row
     detailVisible.value = true
-  }
-
-  /** 手动重推下游通知（仅终态可推，二次确认后调用） */
-  const handleRenotify = async (row: Record<string, any>) => {
-    if (!canRenotify(row)) {
-      ElMessage.warning('代付处理中，暂无可推送的结果通知')
-      return
-    }
-    try {
-      await ElMessageBox.confirm(
-        `确认重新向下游推送该代付单（${row.withdraw_no}）的结果通知？`,
-        '重推通知',
-        { type: 'warning', confirmButtonText: '确认重推', cancelButtonText: '取消' }
-      )
-    } catch {
-      return
-    }
-    renotifyingId.value = row.id
-    try {
-      const res = await api.renotify(row.id)
-      ElMessage.success(res?.message || '通知已重新投递')
-    } finally {
-      renotifyingId.value = ''
-    }
   }
 
   /** 审核下发：确认后用平台已授权代付通道出款（仅待审核单可操作） */
