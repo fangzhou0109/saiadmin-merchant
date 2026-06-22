@@ -23,17 +23,33 @@
           </ElTag>
         </template>
         <template #settleStatus="{ row }">
-          <ElTag :type="(settleStatusMap[row.settle_status]?.tagType as any) || 'info'" size="small">
+          <ElTag
+            :type="(settleStatusMap[row.settle_status]?.tagType as any) || 'info'"
+            size="small"
+          >
             {{ settleStatusMap[row.settle_status]?.label || row.settle_status }}
           </ElTag>
         </template>
         <template #notifyStatus="{ row }">
-          <ElTag :type="(notifyStatusMap[row.notify_status]?.tagType as any) || 'info'" size="small">
+          <ElTag
+            :type="(notifyStatusMap[row.notify_status]?.tagType as any) || 'info'"
+            size="small"
+          >
             {{ notifyStatusMap[row.notify_status]?.label || row.notify_status }}
           </ElTag>
         </template>
         <template #operation="{ row }">
           <ElButton type="primary" size="small" plain @click="openDetail(row)">详情</ElButton>
+          <ElButton
+            type="warning"
+            size="small"
+            plain
+            :disabled="!canRenotify(row)"
+            :loading="renotifyingId === row.id"
+            @click="handleRenotify(row)"
+          >
+            重推通知
+          </ElButton>
         </template>
       </ArtTable>
     </ElCard>
@@ -43,6 +59,7 @@
 </template>
 
 <script setup lang="ts">
+  import { ElMessageBox } from 'element-plus'
   import { useTable } from '@/hooks/core/useTable'
   import api from '@/api/merchant/order'
   import {
@@ -74,6 +91,10 @@
   const searchForm = ref(createDefaultSearchForm())
   const detailVisible = ref(false)
   const currentOrder = ref<Record<string, any>>({})
+  const renotifyingId = ref<number | string>('')
+
+  /** 仅已支付订单可重推通知（回调体仅 success） */
+  const canRenotify = (row: Record<string, any>) => Number(row.status) === 1
 
   const {
     columns,
@@ -116,7 +137,7 @@
         },
         { prop: 'create_time', label: '创建时间', width: 170, sortable: true },
         { prop: 'pay_time', label: '支付时间', width: 170 },
-        { prop: 'operation', label: '操作', width: 90, fixed: 'right', useSlot: true }
+        { prop: 'operation', label: '操作', width: 180, fixed: 'right', useSlot: true }
       ]
     }
   })
@@ -134,5 +155,31 @@
   const openDetail = (row: Record<string, any>) => {
     currentOrder.value = row
     detailVisible.value = true
+  }
+
+  /** 手动重推下游通知（仅已支付单，二次确认后调用） */
+  const handleRenotify = async (row: Record<string, any>) => {
+    if (!canRenotify(row)) {
+      ElMessage.warning('订单未支付成功，暂无可推送的结果通知')
+      return
+    }
+    try {
+      await ElMessageBox.confirm(
+        `确认重新向下游推送该订单（${row.order_no}）的支付结果通知？`,
+        '重推通知',
+        { type: 'warning', confirmButtonText: '确认重推', cancelButtonText: '取消' }
+      )
+    } catch {
+      return
+    }
+
+    renotifyingId.value = row.id
+    try {
+      const res: any = await api.renotify(row.id)
+      ElMessage.success(res?.message || '通知已重新投递')
+      refreshData()
+    } finally {
+      renotifyingId.value = ''
+    }
   }
 </script>

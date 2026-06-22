@@ -19,5 +19,13 @@ export default {
     return request.get<Api.Common.ApiData>({
       url: '/mapi/order/read?id=' + id
     })
+  },
+
+  /** 手动重推下游通知 */
+  renotify(id: number | string) {
+    return request.post<Api.Common.ApiData>({
+      url: '/mapi/order/renotify',
+      data: { id }
+    })
   }
 }
